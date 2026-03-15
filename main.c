@@ -31,6 +31,8 @@ int main() {
                     printf("%s\n", result);
                 else
                     printf("NULL\n");
+
+                fflush(stdout);
             }
 
         } else if (strcmp(command, "EXIT") == 0) {
