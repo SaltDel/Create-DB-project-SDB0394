@@ -1,44 +1,58 @@
 #!/usr/bin/env python3
 """
-Simple persistent key-value store.
+Simple Persistent Key-Value Database
 
-Commands:
+Supported commands (read from STDIN):
+
 SET <key> <value>
 GET <key>
 EXIT
 
-Uses append-only persistence in data.db
+Design:
+- Uses an append-only log file called data.db
+- On startup, the program replays the log to rebuild the in-memory index
+- The in-memory index is implemented as a list (no dictionaries allowed)
+- Last write wins semantics
 """
 
 import sys
+from typing import List, Tuple, Optional
 
-DB_FILE = "data.db"
+DB_FILE: str = "data.db"
 
 
 class Database:
-    def __init__(self):
-        # in-memory store (list of tuples)
-        self.store = []
+    """Simple key-value database using a list as the index."""
 
-        # ensure database file exists immediately
+    def __init__(self) -> None:
+        # In-memory store: list of (key, value) pairs
+        self.store: List[Tuple[str, str]] = []
+
+        # Ensure the database file exists
         with open(DB_FILE, "a"):
             pass
 
+        # Load existing data
         self.load()
 
-    def load(self):
-        """Replay the log file to rebuild the index."""
-        with open(DB_FILE, "r") as f:
-            for line in f:
-                parts = line.strip().split()
+    def load(self) -> None:
+        """Replay the append-only log file to rebuild memory."""
+        try:
+            with open(DB_FILE, "r") as f:
+                for line in f:
+                    parts = line.strip().split()
 
-                if len(parts) == 3 and parts[0] == "SET":
-                    key = parts[1]
-                    value = parts[2]
-                    self._set_memory(key, value)
+                    if len(parts) == 3 and parts[0] == "SET":
+                        key = parts[1]
+                        value = parts[2]
+                        self._set_memory(key, value)
 
-    def _set_memory(self, key, value):
-        """Update only the in-memory store."""
+        except OSError:
+            # If file can't be read, start with empty store
+            pass
+
+    def _set_memory(self, key: str, value: str) -> None:
+        """Update the in-memory index only."""
         for i in range(len(self.store)):
             if self.store[i][0] == key:
                 self.store[i] = (key, value)
@@ -46,24 +60,27 @@ class Database:
 
         self.store.append((key, value))
 
-    def set(self, key, value):
-        """Store key/value and persist."""
+    def set(self, key: str, value: str) -> None:
+        """Store a key-value pair and persist to disk."""
         self._set_memory(key, value)
 
-        with open(DB_FILE, "a") as f:
-            f.write(f"SET {key} {value}\n")
-            f.flush()
+        try:
+            with open(DB_FILE, "a") as f:
+                f.write(f"SET {key} {value}\n")
+                f.flush()
+        except OSError:
+            pass
 
-    def get(self, key):
-        """Return value or NULL."""
+    def get(self, key: str) -> Optional[str]:
+        """Retrieve value for key or None if not found."""
         for k, v in self.store:
             if k == key:
                 return v
+        return None
 
-        return "NULL"
 
-
-def main():
+def main() -> None:
+    """Main command loop reading commands from STDIN."""
     db = Database()
 
     while True:
@@ -84,7 +101,12 @@ def main():
 
         elif cmd == "GET" and len(parts) == 2:
             result = db.get(parts[1])
-            sys.stdout.write(result + "\n")
+
+            if result is not None:
+                sys.stdout.write(result + "\n")
+            else:
+                sys.stdout.write("\n")
+
             sys.stdout.flush()
 
         elif cmd == "EXIT":
