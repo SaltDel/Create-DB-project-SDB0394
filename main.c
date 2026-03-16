@@ -18,7 +18,7 @@ int main() {
                 db_set(key, value);
             }
 
-        } 
+        }
         else if (strcmp(command, "GET") == 0) {
 
             if (scanf("%99s", key) == 1) {
@@ -33,7 +33,7 @@ int main() {
                 fflush(stdout);
             }
 
-        } 
+        }
         else if (strcmp(command, "EXIT") == 0) {
 
             break;
