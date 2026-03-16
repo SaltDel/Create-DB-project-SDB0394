@@ -5,17 +5,19 @@
 static Record records[MAX_RECORDS];
 static int record_count = 0;
 
- //search for key index 
+/* search for key index */
 static int find_key(const char *key) {
+
     for (int i = 0; i < record_count; i++) {
         if (strcmp(records[i].key, key) == 0) {
             return i;
         }
     }
+
     return -1;
 }
 
-/* internal set used when rebuilding log */
+/* memory only set (used when rebuilding database) */
 static void db_set_memory(const char *key, const char *value) {
 
     int index = find_key(key);
@@ -43,8 +45,10 @@ static void db_set_memory(const char *key, const char *value) {
 /* rebuild memory from log */
 void db_init() {
 
-    FILE *file = fopen("data.db", "a+");   // ensures file exists
-    if (!file) return;
+    FILE *file = fopen("data.db", "a+");
+
+    if (!file)
+        return;
 
     rewind(file);
 
@@ -67,7 +71,6 @@ void db_set(const char *key, const char *value) {
 
     db_set_memory(key, value);
 
-    /* append to disk */
     FILE *file = fopen("data.db", "a");
 
     if (file) {
