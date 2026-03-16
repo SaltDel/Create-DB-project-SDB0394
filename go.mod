@@ -1,3 +1,3 @@
-module keyvaluestore
+module kvstore
 
 go 1.21
